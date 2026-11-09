@@ -130,13 +130,11 @@ Ping antara A1 dan A25 berhasil dua arah untuk pasangan JJ dan Mika serta Lain d
 | Lain → JJ | `ping -c 3 192.234.14.2` | 3 dari 3 | 0% |
 | JJ → Lain | `ping -c 3 192.234.15.2` | 3 dari 3 | 0% |
 
-![Ping JJ ke Mika, 0 persen packet loss](images/ping-jj-ke-mika-lulus.png)
-
-![Ping Mika ke JJ, 0 persen packet loss](images/ping-mika-ke-jj-lulus.png)
-
 ![Ping Lain ke JJ, 0 persen packet loss](images/ping-lain-ke-jj.png)
 
 ![Ping JJ ke Lain, 0 persen packet loss](images/ping-jj-ke-lain.png)
+
+[Bukti tambahan JJ → Mika](images/ping-jj-ke-mika-lulus.png) · [Bukti tambahan Mika → JJ](images/ping-mika-ke-jj-lulus.png)
 
 <details>
 <summary>Diagnosis awal sebelum konfigurasi routing</summary>
@@ -148,17 +146,9 @@ Ping antara A1 dan A25 berhasil dua arah untuk pasangan JJ dan Mika serta Lain d
 | JJ (`192.234.14.2`) | Mika (`192.234.15.3`) | `Destination Net Unreachable` dari Cyberia (`192.234.14.1`). 0 dari 3 paket diterima. |
 | Mika (`192.234.15.3`) | JJ (`192.234.14.2`) | `Destination Net Unreachable` dari Shibuya (`192.234.15.1`). 0 dari 3 paket diterima. |
 
-![Ping JJ ke Mika, 100 persen packet loss](images/ping-jj-ke-mika.png)
-
-![Ping Mika ke JJ, 100 persen packet loss](images/ping-mika-ke-jj.png)
-
 ### Pemeriksaan gateway sebelum penambahan rute
 
 Di kedua gateway, `/proc/sys/net/ipv4/ip_forward` bernilai `1`, tetapi `ip route get` ke alamat host tujuan menampilkan `Network is unreachable`. Jadi forwarding sudah aktif dan tabel routing belum punya jalur ke tujuan yang diuji.
-
-![Cyberia belum menemukan rute ke alamat Mika](images/cyberia-sebelum-rute.png)
-
-![Shibuya belum menemukan rute ke alamat JJ](images/shibuya-sebelum-rute.png)
 
 ### Pemeriksaan gateway setelah penambahan rute
 
@@ -166,12 +156,6 @@ Di kedua gateway, `/proc/sys/net/ipv4/ip_forward` bernilai `1`, tetapi `ip route
 |---|---|---|
 | Cyberia | `192.234.0.0/20 via 192.234.16.58 dev eth2` | Tujuan `192.234.15.3` keluar melalui `eth2` menuju `192.234.16.58` (Wired). |
 | Shibuya | `default via 192.234.16.89 dev eth0` | Tujuan `192.234.14.2` keluar melalui `eth0` menuju `192.234.16.89` (Phantoma). |
-
-![Cyberia menemukan next hop menuju Mika](images/cyberia-setelah-rute.png)
-
-![Shibuya menemukan next hop menuju JJ](images/shibuya-setelah-rute.png)
-
-Kedua screenshot di atas menunjukkan next hop yang dipilih masing-masing gateway.
 
 </details>
 
