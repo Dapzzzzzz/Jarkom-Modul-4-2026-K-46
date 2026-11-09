@@ -22,7 +22,23 @@ Topologi terdiri dari **52 perangkat dan 51 kabel**. Perangkatnya terdiri dari 1
 
 Kebutuhan IP suatu subnet dihitung dari jumlah host pada gambar ditambah jumlah interface router yang terhubung ke subnet tersebut. Port switch pada topologi ini tidak diberi IP. Contohnya, A6 membutuhkan `700 (Karl) + 180 (Lin) + 1 (Psyche) = 881 IP`. Setelah menambah dua alamat untuk Network ID dan broadcast, kebutuhan bloknya menjadi 883 alamat. Pangkat dua terkecil yang memenuhi kebutuhan itu adalah `2^10 = 1.024`, sehingga prefix A6 adalah `32 − 10 = /22`.
 
-Pembagian dimulai dari blok terbesar. A6 mendapat `192.234.0.0/22` dengan broadcast `192.234.3.255`. A11 mendapat blok berikutnya mulai `192.234.4.0/22`. Keduanya merupakan dua bagian dari `192.234.0.0/21`. Di spreadsheet, hasil pembagian ditampilkan menurut nomor subnet A1–A25. [Tabel kebutuhan IP](https://docs.google.com/spreadsheets/d/1rVodUBcBINJPgOZ-5xVqw0H3jL9A58Wp/edit?gid=1199523220#gid=1199523220) · [Tabel pembagian IP VLSM](https://docs.google.com/spreadsheets/d/1rVodUBcBINJPgOZ-5xVqw0H3jL9A58Wp/edit?gid=916994593#gid=916994593)
+Ukuran 25 blok setelah pembulatan berjumlah 4.188 alamat. Blok `/20` menyediakan 4.096 alamat, sehingga alokasi dimulai dari `192.234.0.0/19` yang menyediakan 8.192 alamat.
+
+Pohon VLSM membagi blok induk menjadi dua blok sama besar setiap kali prefix bertambah satu. Cabang di bawah memperlihatkan cara mendapatkan dua blok `/22` untuk A6 dan A11.
+
+```text
+192.234.0.0/19
+├── 192.234.0.0/20
+│   ├── 192.234.0.0/21
+│   │   ├── 192.234.0.0/22  A6
+│   │   └── 192.234.4.0/22  A11
+│   └── 192.234.8.0/21      Dibagi lagi untuk subnet berikutnya
+└── 192.234.16.0/20         Dibagi lagi untuk subnet kecil dan link router
+```
+
+Netmask `/22` adalah `255.255.252.0`. Oktet ketiga bertambah `256 − 252 = 4` setiap pindah blok. A6 dimulai dari `192.234.0.0`, jadi batas blok berikutnya adalah `192.234.4.0`. Broadcast A6 adalah satu alamat sebelum batas itu, yaitu `192.234.3.255`. Rentang IP yang bisa dipakai adalah `192.234.0.1` sampai `192.234.3.254`. A11 mulai di `192.234.4.0`.
+
+Pembagian dimulai dari blok terbesar, sedangkan tabel disusun menurut nomor subnet agar mudah dicocokkan dengan topologi. Kolom **Jumlah IP** menunjukkan kebutuhan host dan interface router sebelum penambahan Network ID dan broadcast. [Tabel kebutuhan IP](https://docs.google.com/spreadsheets/d/1rVodUBcBINJPgOZ-5xVqw0H3jL9A58Wp/edit?gid=1199523220#gid=1199523220) · [Tabel pembagian IP VLSM](https://docs.google.com/spreadsheets/d/1rVodUBcBINJPgOZ-5xVqw0H3jL9A58Wp/edit?gid=916994593#gid=916994593)
 
 | Subnet | Jumlah IP | Network/prefix |
 |---|---:|---|
@@ -56,6 +72,8 @@ Pembagian dimulai dari blok terbesar. A6 mendapat `192.234.0.0/22` dengan broadc
 
 Host menggunakan IP router di subnetnya sebagai gateway. JJ (`192.234.14.2`) memakai Cyberia (`192.234.14.1`) di A1. Mika (`192.234.15.3`) memakai Shibuya (`192.234.15.1`) di A25. Untuk komunikasi lintas subnet, router mengaktifkan IPv4 forwarding dan menggunakan static route ke jaringan tujuan. Jalur balik juga harus tersedia.
 
+Saat JJ mengirim paket ke Mika, Cyberia meneruskannya ke Wired. Paket kemudian melewati Tachibana, Deus, Protocol7, Knights, dan Phantoma sebelum sampai ke Shibuya. Shibuya meneruskan paket ke Mika melalui LAN A25. Saat Mika membalas, Shibuya memakai default route ke Phantoma untuk mulai mengirim paket kembali ke A1.
+
 ## Cara menguji
 
 1. Buka console **Cyberia**, **Wired**, dan **Tachibana** satu per satu, lalu jalankan `ip route` untuk melihat rute aktif dan next hop masing-masing.
@@ -67,7 +85,7 @@ Host menggunakan IP router di subnetnya sebagai gateway. JJ (`192.234.14.2`) mem
 
 ### Ping internal setelah konfigurasi routing
 
-Ping antara A1 dan A25 berhasil dua arah untuk pasangan JJ dan Mika serta Lain dan JJ.
+Ping antara A1 dan A25 berhasil dua arah untuk pasangan JJ dan Mika serta Lain dan JJ. Pada tiap screenshot, tiga baris `bytes from` menunjukkan balasan dari IP tujuan. Angka `3 received` di akhir menunjukkan semua paket uji mendapat balasan.
 
 | Arah | Perintah di perangkat sumber | Paket diterima | Packet loss |
 |---|---|---:|---:|
@@ -123,7 +141,7 @@ Kedua screenshot di atas menunjukkan next hop yang dipilih masing-masing gateway
 
 ### Tabel routing Cyberia, Wired, dan Tachibana
 
-Perintah `ip route` menampilkan rute internal yang aktif di tiga router. Baris `default` pada Wired dan Tachibana menunjukkan arah ke router induk. Baris dengan `via` menunjukkan router berikutnya untuk jaringan tujuan tertentu.
+Perintah `ip route` menampilkan rute yang aktif. Baca setiap baris dari kiri ke kanan. Prefix di awal menunjukkan jaringan tujuan, `via` menunjukkan IP router berikutnya, dan `dev` menunjukkan interface untuk mengirim paket. Baris `proto kernel scope link` menunjukkan jaringan yang terhubung langsung. Router memakai rute dengan prefix paling spesifik yang cocok, lalu memakai `default` jika tidak ada rute yang lebih spesifik.
 
 | Router | Default route | Contoh rute internal dari screenshot |
 |---|---|---|
@@ -136,6 +154,8 @@ Perintah `ip route` menampilkan rute internal yang aktif di tiga router. Baris `
 ![Hasil ip route pada Wired](images/ip-route-wired.png)
 
 ![Hasil ip route pada Tachibana](images/ip-route-tachibana.png)
+
+Contoh ringkasan rute ada di Wired. Jaringan `192.234.12.0/24` dan `192.234.13.0/24` sama-sama menuju Navi, sehingga Wired cukup mencatat `192.234.12.0/23` lewat `192.234.16.62`. Navi meneruskan paket ke LAN tujuan yang terhubung langsung padanya.
 
 ### Koneksi ke luar melalui NAT
 
